@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AB Fashion Jewellery – WhatsApp Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">💎</div>
+      <div class="logo-text">
+        <div class="logo-title">AB Fashion</div>
+        <div class="logo-sub">WhatsApp Dashboard</div>
+      </div>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="#" class="nav-link active" data-page="overview">
+        <span class="nav-icon">📊</span> Overview
+      </a></li>
+      <li><a href="#" class="nav-link" data-page="daybook">
+        <span class="nav-icon">📤</span> Day Book
+      </a></li>
+      <li><a href="#" class="nav-link" data-page="cheques">
+        <span class="nav-icon">🏦</span> Cheques
+      </a></li>
+      <li><a href="#" class="nav-link" data-page="contacts">
+        <span class="nav-icon">👥</span> Contacts
+      </a></li>
+      <li><a href="#" class="nav-link" data-page="history">
+        <span class="nav-icon">📋</span> Message History
+      </a></li>
+      <li><a href="#" class="nav-link" data-page="settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </a></li>
+    </ul>
+
+    <div class="sidebar-status" id="apiStatus">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Checking API...</span>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main" id="main">
+
+    <!-- OVERVIEW PAGE -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <h1>Overview</h1>
+        <div class="header-date" id="headerDate"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card green">
+          <div class="stat-icon">📤</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statTodaySent">–</div>
+            <div class="stat-label">Messages Today</div>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statCustomers">–</div>
+            <div class="stat-label">Customers</div>
+          </div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon">⏰</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statChequesTomorrow">–</div>
+            <div class="stat-label">Cheques Due Tomorrow</div>
+          </div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">❌</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statDishonored">–</div>
+            <div class="stat-label">Dishonored Cheques</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3>Quick Actions</h3>
+          </div>
+          <div class="quick-actions">
+            <button class="btn btn-primary" onclick="goTo('daybook')">📤 Upload Day Book PDF</button>
+            <button class="btn btn-amber" onclick="sendUpcomingReminders()">⏰ Send Tomorrow's Cheque Reminders</button>
+            <button class="btn btn-outline" onclick="goTo('contacts')">➕ Add Contact</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Cheque Overview</h3></div>
+          <div class="cheque-overview">
+            <div class="cheque-stat pending">
+              <span class="cs-label">Pending</span>
+              <span class="cs-value" id="ovChqPending">–</span>
+            </div>
+            <div class="cheque-stat cleared">
+              <span class="cs-label">Cleared</span>
+              <span class="cs-value" id="ovChqCleared">–</span>
+            </div>
+            <div class="cheque-stat dishonored">
+              <span class="cs-label">Dishonored</span>
+              <span class="cs-value" id="ovChqDishonored">–</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card full-width">
+          <div class="card-header">
+            <h3>Recent Messages</h3>
+            <a href="#" onclick="goTo('history')" class="card-link">View All</a>
+          </div>
+          <div id="recentMessages">
+            <div class="loading">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAY BOOK PAGE -->
+    <div class="page" id="page-daybook">
+      <div class="page-header">
+        <h1>Day Book</h1>
+        <p class="page-sub">Upload your daily BillX PDF to send WhatsApp messages automatically</p>
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">Drop your Day Book PDF here</div>
+        <div class="upload-sub">or</div>
+        <label class="btn btn-primary">
+          Choose PDF File
+          <input type="file" id="daybookFile" accept=".pdf" hidden>
+        </label>
+      </div>
+
+      <div class="card" id="parseResult" style="display:none">
+        <div class="card-header">
+          <h3>📋 Parsed Entries</h3>
+          <span id="parsedDate" class="badge"></span>
+        </div>
+
+        <div class="category-tabs">
+          <button class="cat-tab active" data-cat="all">All</button>
+          <button class="cat-tab" data-cat="receivable">💚 Receivable</button>
+          <button class="cat-tab" data-cat="payment">🟡 Payment</button>
+          <button class="cat-tab" data-cat="staff">👤 Staff</button>
+          <button class="cat-tab" data-cat="tp">🔄 Third Party</button>
+        </div>
+
+        <div id="parsedEntriesContainer"></div>
+
+        <div class="send-bar">
+          <div class="send-summary" id="sendSummary"></div>
+          <button class="btn btn-primary btn-large" id="sendAllBtn" onclick="sendDaybookMessages()">
+            📨 Send All Messages
+          </button>
+        </div>
+      </div>
+
+      <div class="card" id="sendResult" style="display:none">
+        <div class="card-header"><h3>Send Results</h3></div>
+        <div id="sendResultContent"></div>
+      </div>
+    </div>
+
+    <!-- CHEQUES PAGE -->
+    <div class="page" id="page-cheques">
+      <div class="page-header">
+        <h1>Cheque Management</h1>
+        <div class="header-actions">
+          <button class="btn btn-outline" onclick="showImportChequeModal()">📥 Import PDF</button>
+          <button class="btn btn-outline" onclick="showAddChequeModal()">➕ Add Cheque</button>
+          <button class="btn btn-amber" onclick="sendUpcomingReminders()">⏰ Send Tomorrow's Reminders</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-status="">All</button>
+          <button class="filter-tab" data-status="Pending">⏰ Pending</button>
+          <button class="filter-tab" data-status="Cleared">✅ Cleared</button>
+          <button class="filter-tab" data-status="Dishonored">❌ Dishonored</button>
+        </div>
+        <input type="text" class="search-input" id="chequeSearch" placeholder="Search name, cheque no, bank..." oninput="loadCheques()">
+      </div>
+
+      <div class="card">
+        <div id="chequesTable">
+          <div class="loading">Loading cheques...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACTS PAGE -->
+    <div class="page" id="page-contacts">
+      <div class="page-header">
+        <h1>Contacts</h1>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="showAddContactModal()">➕ Add Contact</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-type="">All</button>
+          <button class="filter-tab" data-type="customer">Customers</button>
+          <button class="filter-tab" data-type="supplier">Suppliers</button>
+        </div>
+        <input type="text" class="search-input" id="contactSearch" placeholder="Search name, phone, city..." oninput="loadContacts()">
+      </div>
+
+      <div class="card">
+        <div id="contactsTable">
+          <div class="loading">Loading contacts...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESSAGE HISTORY PAGE -->
+    <div class="page" id="page-history">
+      <div class="page-header">
+        <h1>Message History</h1>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-cat2="">All</button>
+          <button class="filter-tab" data-cat2="receivable">Receivable</button>
+          <button class="filter-tab" data-cat2="payment">Payment</button>
+          <button class="filter-tab" data-cat2="cheque">Cheque</button>
+          <button class="filter-tab" data-cat2="staff">Staff</button>
+        </div>
+        <input type="text" class="search-input" id="historySearch" placeholder="Search name..." oninput="loadHistory()">
+      </div>
+
+      <div class="card">
+        <div id="historyTable">
+          <div class="loading">Loading history...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <h1>Settings</h1>
+      </div>
+
+      <div class="card settings-card">
+        <div class="card-header"><h3>WhatsApp API Credentials</h3></div>
+        <div class="settings-note">
+          Get these from <strong>developers.facebook.com</strong> → Your App → WhatsApp → API Setup
+        </div>
+        <div class="form-group">
+          <label>Phone Number ID</label>
+          <input type="text" id="settingPhoneId" placeholder="e.g. 123456789012345">
+        </div>
+        <div class="form-group">
+          <label>Permanent Access Token</label>
+          <input type="password" id="settingToken" placeholder="Enter new token (leave blank to keep current)">
+          <small id="settingTokenStatus"></small>
+        </div>
+        <div class="form-group">
+          <label>WhatsApp Business Account ID (optional)</label>
+          <input type="text" id="settingWabaId" placeholder="e.g. 987654321098765">
+        </div>
+        <div class="form-group">
+          <label>Company Name</label>
+          <input type="text" id="settingCompany" placeholder="AB Fashion Jewellery">
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+          <button class="btn btn-outline" onclick="validateAPI()">🔗 Test Connection</button>
+        </div>
+        <div id="settingsMsg" class="settings-msg"></div>
+      </div>
+
+      <div class="card settings-card">
+        <div class="card-header"><h3>Test Message</h3></div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>Send test message to phone (with country code)</label>
+            <input type="text" id="testPhone" placeholder="e.g. 03001234567">
+          </div>
+          <button class="btn btn-outline align-end" onclick="sendTestMessage()">Send Test</button>
+        </div>
+        <div id="testMsg" class="settings-msg"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+
+  <!-- Add Contact Modal -->
+  <div class="modal" id="contactModal">
+    <div class="modal-header">
+      <h3 id="contactModalTitle">Add Contact</h3>
+      <button onclick="closeModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="contactId">
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Name *</label>
+          <input type="text" id="contactName" placeholder="Customer / Supplier name">
+        </div>
+        <div class="form-group" style="width:130px">
+          <label>Type</label>
+          <select id="contactTypeField">
+            <option value="customer">Customer</option>
+            <option value="supplier">Supplier</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Phone *</label>
+          <input type="text" id="contactPhone" placeholder="03001234567">
+        </div>
+        <div class="form-group flex-1">
+          <label>City</label>
+          <input type="text" id="contactCity" placeholder="Karachi">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Account Code (POS)</label>
+          <input type="text" id="contactCode" placeholder="L-CUS-001">
+        </div>
+        <div class="form-group flex-1">
+          <label>Balance (PKR)</label>
+          <input type="number" id="contactBalance" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="contactNotes" placeholder="Any notes..." rows="2"></textarea>
+      </div>
+      <div class="form-group checkbox-group">
+        <label>
+          <input type="checkbox" id="contactBlacklisted">
+          Mark as Blacklisted (will skip WhatsApp messages)
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+
+  <!-- Add Cheque Modal -->
+  <div class="modal" id="chequeModal">
+    <div class="modal-header">
+      <h3>Add Cheque</h3>
+      <button onclick="closeModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Account Name *</label>
+          <input type="text" id="chqName" placeholder="Customer name">
+        </div>
+        <div class="form-group flex-1">
+          <label>Phone</label>
+          <input type="text" id="chqPhone" placeholder="03001234567">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Cheque No</label>
+          <input type="text" id="chqNo" placeholder="CHQ123456">
+        </div>
+        <div class="form-group flex-1">
+          <label>Bank Name</label>
+          <input type="text" id="chqBank" placeholder="HBL / MCB / UBL...">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Amount (PKR) *</label>
+          <input type="number" id="chqAmount" placeholder="0">
+        </div>
+        <div class="form-group flex-1">
+          <label>Cheque Date</label>
+          <input type="date" id="chqDate">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="chqStatus">
+          <option value="Pending">⏰ Pending</option>
+          <option value="Cleared">✅ Cleared</option>
+          <option value="Dishonored">❌ Dishonored</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCheque()">Save Cheque</button>
+    </div>
+  </div>
+
+  <!-- Message Preview Modal -->
+  <div class="modal" id="messageModal">
+    <div class="modal-header">
+      <h3>Message Preview</h3>
+      <button onclick="closeModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="whatsapp-bubble" id="messagePreviewText"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <!-- Import Cheques Modal -->
+  <div class="modal" id="importChequeModal">
+    <div class="modal-header">
+      <h3>Import Cheques from PDF</h3>
+      <button onclick="closeModal()" class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Upload your BillX Cheque List Report PDF to import all cheques automatically.</p>
+      <div class="form-group">
+        <label>Cheque List PDF</label>
+        <input type="file" id="chequePdfFile" accept=".pdf">
+      </div>
+      <div id="importProgress"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="importChequesPDF()">Import</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
