@@ -1,0 +1,734 @@
+// ── AB Fashion Jewellery – WhatsApp Dashboard ──
+// Frontend JavaScript
+
+let currentPage = 'overview';
+let parsedSession = null;
+let contactTypeFilter = '';
+let chequeStatusFilter = '';
+let historyCategory = '';
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-PK', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  // Nav links
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      goTo(link.dataset.page);
+    });
+  });
+
+  // Filter tabs - contacts
+  document.querySelectorAll('.filter-tab[data-type]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab[data-type]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      contactTypeFilter = tab.dataset.type;
+      loadContacts();
+    });
+  });
+
+  // Filter tabs - cheques
+  document.querySelectorAll('.filter-tab[data-status]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab[data-status]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      chequeStatusFilter = tab.dataset.status;
+      loadCheques();
+    });
+  });
+
+  // Filter tabs - history
+  document.querySelectorAll('.filter-tab[data-cat2]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab[data-cat2]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      historyCategory = tab.dataset.cat2;
+      loadHistory();
+    });
+  });
+
+  // Category tabs (day book)
+  document.querySelectorAll('.cat-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderEntries(tab.dataset.cat);
+    });
+  });
+
+  // File upload
+  const daybookInput = document.getElementById('daybookFile');
+  daybookInput?.addEventListener('change', e => {
+    if (e.target.files[0]) uploadDayBook(e.target.files[0]);
+  });
+
+  // Drag and drop
+  const zone = document.getElementById('uploadZone');
+  zone?.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone?.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone?.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file?.type === 'application/pdf') uploadDayBook(file);
+    else showToast('Please drop a PDF file', 'error');
+  });
+
+  // Load initial data
+  loadDashboard();
+  checkAPIStatus();
+  loadSettings();
+});
+
+// ── Navigation ──
+function goTo(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById(`page-${page}`)?.classList.add('active');
+  document.querySelector(`.nav-link[data-page="${page}"]`)?.classList.add('active');
+
+  // Load page data
+  if (page === 'overview') loadDashboard();
+  if (page === 'contacts') loadContacts();
+  if (page === 'cheques') loadCheques();
+  if (page === 'history') loadHistory();
+  if (page === 'settings') loadSettings();
+}
+
+// ── Dashboard ──
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/dashboard');
+    const data = await res.json();
+    if (!data.success) return;
+    const d = data.data;
+
+    document.getElementById('statTodaySent').textContent = d.messages.todaySent;
+    document.getElementById('statCustomers').textContent = d.contacts.customers + d.contacts.suppliers;
+    document.getElementById('statChequesTomorrow').textContent = d.cheques.dueTomorrow;
+    document.getElementById('statDishonored').textContent = d.cheques.dishonored;
+    document.getElementById('ovChqPending').textContent = d.cheques.pending;
+    document.getElementById('ovChqCleared').textContent = d.cheques.cleared;
+    document.getElementById('ovChqDishonored').textContent = d.cheques.dishonored;
+
+    loadRecentMessages();
+  } catch (e) { console.error('Dashboard load error:', e); }
+}
+
+async function loadRecentMessages() {
+  const res = await fetch('/api/messages?limit=6');
+  const data = await res.json();
+  const el = document.getElementById('recentMessages');
+
+  if (!data.data?.length) {
+    el.innerHTML = '<div class="empty">No messages sent yet</div>';
+    return;
+  }
+
+  el.innerHTML = data.data.map(m => `
+    <div class="msg-item">
+      <span class="result-icon">${m.status === 'sent' ? '✅' : '❌'}</span>
+      <span class="msg-name">${esc(m.contactName)}</span>
+      <span class="badge ${catBadge(m.category)}">${m.category}</span>
+      <span class="msg-time">${timeAgo(m.sentAt)}</span>
+    </div>
+  `).join('');
+}
+
+// ── API Status ──
+async function checkAPIStatus() {
+  try {
+    const res = await fetch('/api/settings');
+    const data = await res.json();
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+
+    if (data.data?.accessTokenSet) {
+      dot.className = 'status-dot connected';
+      text.textContent = 'API Connected';
+    } else {
+      dot.className = 'status-dot error';
+      text.textContent = 'API Not Set';
+    }
+  } catch { }
+}
+
+// ── Day Book ──
+async function uploadDayBook(file) {
+  const zone = document.getElementById('uploadZone');
+  zone.innerHTML = '<div class="upload-icon">⏳</div><div class="upload-text">Parsing PDF...</div>';
+
+  const formData = new FormData();
+  formData.append('daybook', file);
+
+  try {
+    const res = await fetch('/api/daybook/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!data.success) {
+      showToast(data.error, 'error');
+      resetUploadZone();
+      return;
+    }
+
+    parsedSession = data;
+    document.getElementById('parsedDate').textContent = data.date || 'Today';
+    renderEntries('all');
+    document.getElementById('parseResult').style.display = 'block';
+    document.getElementById('sendResult').style.display = 'none';
+
+    const total = data.summary;
+    document.getElementById('sendSummary').textContent =
+      `Found: ${total.receivable || 0} Receivable | ${total.payment || 0} Payment | ${total.staff || 0} Staff | ${total.tp || 0} TP`;
+
+    showToast(`Parsed ${data.totalEntries} entries from ${file.name}`);
+  } catch (e) {
+    showToast('Failed to parse PDF: ' + e.message, 'error');
+    resetUploadZone();
+  }
+}
+
+function resetUploadZone() {
+  document.getElementById('uploadZone').innerHTML = `
+    <div class="upload-icon">📄</div>
+    <div class="upload-text">Drop your Day Book PDF here</div>
+    <div class="upload-sub">or</div>
+    <label class="btn btn-primary">
+      Choose PDF File
+      <input type="file" id="daybookFile" accept=".pdf" hidden>
+    </label>
+  `;
+  document.getElementById('daybookFile')?.addEventListener('change', e => {
+    if (e.target.files[0]) uploadDayBook(e.target.files[0]);
+  });
+}
+
+function renderEntries(filterCat) {
+  if (!parsedSession) return;
+  const container = document.getElementById('parsedEntriesContainer');
+  const categories = parsedSession.categories || {};
+
+  const catLabels = { receivable: '💚 Receivable Voucher', payment: '🟡 Payment Voucher', staff: '👤 Staff Payment', tp: '🔄 Third Party' };
+
+  let html = '';
+  let totalEntries = 0;
+
+  for (const [cat, entries] of Object.entries(categories)) {
+    if (filterCat !== 'all' && cat !== filterCat) continue;
+    if (!entries?.length) continue;
+
+    totalEntries += entries.length;
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:8px">${catLabels[cat] || cat}</div>`;
+
+    for (const e of entries) {
+      const hasPhone = !!e.phone;
+      const isBlacklisted = e.blacklisted;
+      html += `<div class="entry-item">
+        <span class="entry-status">${isBlacklisted ? '🚫' : hasPhone ? '✅' : '⚠️'}</span>
+        <span class="entry-name">${esc(e.accountName)}</span>
+        <span class="entry-phone">${e.phone || '<span style="color:#ef4444">No phone</span>'}</span>
+        <span class="entry-amount">PKR ${fmt(e.amount)}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (!html) html = '<div class="empty">No entries in this category</div>';
+  container.innerHTML = html;
+}
+
+async function sendDaybookMessages() {
+  if (!parsedSession?.sessionId) return showToast('Please upload a PDF first', 'error');
+
+  const btn = document.getElementById('sendAllBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Sending...';
+
+  try {
+    const res = await fetch(`/api/daybook/send/${parsedSession.sessionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showToast(data.error, 'error');
+      btn.disabled = false;
+      btn.textContent = '📨 Send All Messages';
+      return;
+    }
+
+    const s = data.summary;
+    let html = `<div style="margin-bottom:12px;font-weight:600">
+      ✅ Sent: ${s.sent} | ❌ Failed: ${s.failed} | ⏭️ Skipped: ${s.skipped}
+    </div>`;
+
+    html += data.results.map(r => `
+      <div class="result-row">
+        <span class="result-icon">${r.status === 'sent' ? '✅' : r.status === 'failed' ? '❌' : '⏭️'}</span>
+        <span class="result-name">${esc(r.name)}</span>
+        <span class="result-reason">${r.error || r.reason || ''}</span>
+      </div>
+    `).join('');
+
+    document.getElementById('sendResultContent').innerHTML = html;
+    document.getElementById('sendResult').style.display = 'block';
+    showToast(`Done! Sent: ${s.sent}, Failed: ${s.failed}`, s.failed > 0 ? '' : 'success');
+    loadDashboard();
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📨 Send All Messages';
+  }
+}
+
+// ── Cheques ──
+async function loadCheques() {
+  const search = document.getElementById('chequeSearch')?.value || '';
+  const params = new URLSearchParams();
+  if (chequeStatusFilter) params.set('status', chequeStatusFilter);
+  if (search) params.set('search', search);
+
+  const res = await fetch('/api/cheques?' + params);
+  const data = await res.json();
+  const el = document.getElementById('chequesTable');
+
+  if (!data.data?.length) {
+    el.innerHTML = '<div class="empty">No cheques found. Import your Cheque List PDF to get started.</div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Name</th><th>Cheque No</th><th>Bank</th><th>Date</th>
+      <th>Amount</th><th>Balance</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+      ${data.data.map(c => `<tr>
+        <td>${esc(c.accountName)}</td>
+        <td>${esc(c.chequeNo || '–')}</td>
+        <td>${esc(c.bankName || '–')}</td>
+        <td>${esc(c.chequeDate || '–')}</td>
+        <td>PKR ${fmt(c.amount)}</td>
+        <td>${c.status === 'Cleared' ? '–' : 'PKR ' + fmt(c.balance || c.amount)}</td>
+        <td><span class="badge ${chequeStatusBadge(c.status)}">${c.status}</span></td>
+        <td><div class="table-actions">
+          ${c.status === 'Pending' ? `<button class="btn btn-sm btn-amber" onclick="sendChequeReminder('${c.id}','upcoming')">⏰ Remind</button>` : ''}
+          ${c.status === 'Cleared' ? `<button class="btn btn-sm btn-outline" onclick="sendChequeReminder('${c.id}','cleared')">✅ Notify</button>` : ''}
+          ${c.status === 'Dishonored' ? `<button class="btn btn-sm btn-red" onclick="sendChequeReminder('${c.id}','dishonored')">❌ Alert</button>` : ''}
+          <button class="btn btn-sm btn-outline" onclick="updateChequeStatus('${c.id}', '${c.status}')">Edit</button>
+        </div></td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+async function sendChequeReminder(id, type) {
+  try {
+    const res = await fetch(`/api/cheques/${id}/send-reminder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reminderType: type })
+    });
+    const data = await res.json();
+    if (data.success) showToast('Reminder sent!', 'success');
+    else showToast(data.error, 'error');
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function sendUpcomingReminders() {
+  showToast('Sending tomorrow\'s cheque reminders...');
+  try {
+    const res = await fetch('/api/cheques/bulk/send-upcoming', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Sent ${data.summary.sent} reminders, ${data.summary.failed} failed`, data.summary.failed > 0 ? '' : 'success');
+    } else {
+      showToast(data.error, 'error');
+    }
+    loadDashboard();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function showAddChequeModal() {
+  document.getElementById('chqName').value = '';
+  document.getElementById('chqPhone').value = '';
+  document.getElementById('chqNo').value = '';
+  document.getElementById('chqBank').value = '';
+  document.getElementById('chqAmount').value = '';
+  document.getElementById('chqDate').value = '';
+  document.getElementById('chqStatus').value = 'Pending';
+  openModal('chequeModal');
+}
+
+async function saveCheque() {
+  const payload = {
+    accountName: document.getElementById('chqName').value.trim(),
+    phone: document.getElementById('chqPhone').value.trim(),
+    chequeNo: document.getElementById('chqNo').value.trim(),
+    bankName: document.getElementById('chqBank').value.trim(),
+    amount: document.getElementById('chqAmount').value,
+    chequeDate: document.getElementById('chqDate').value,
+    status: document.getElementById('chqStatus').value
+  };
+
+  if (!payload.accountName || !payload.amount) return showToast('Name and amount required', 'error');
+
+  const res = await fetch('/api/cheques', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (data.success) { closeModal(); loadCheques(); showToast('Cheque added', 'success'); }
+  else showToast(data.error, 'error');
+}
+
+async function updateChequeStatus(id, currentStatus) {
+  const statuses = ['Pending', 'Cleared', 'Dishonored'];
+  const next = statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length];
+  if (!confirm(`Change status to "${next}"?`)) return;
+
+  const res = await fetch(`/api/cheques/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: next, balance: next === 'Cleared' ? 0 : undefined })
+  });
+  const data = await res.json();
+  if (data.success) { loadCheques(); showToast(`Status changed to ${next}`, 'success'); }
+  else showToast(data.error, 'error');
+}
+
+function showImportChequeModal() {
+  document.getElementById('importProgress').innerHTML = '';
+  document.getElementById('chequePdfFile').value = '';
+  openModal('importChequeModal');
+}
+
+async function importChequesPDF() {
+  const file = document.getElementById('chequePdfFile').files[0];
+  if (!file) return showToast('Please select a PDF file', 'error');
+
+  document.getElementById('importProgress').innerHTML = '<div class="loading">Importing... this may take a moment for large files.</div>';
+
+  const formData = new FormData();
+  formData.append('cheques', file);
+
+  try {
+    const res = await fetch('/api/cheques/import-pdf', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.success) {
+      document.getElementById('importProgress').innerHTML = `<div style="color:#065f46;background:#d1fae5;padding:10px;border-radius:8px">✅ Imported ${data.imported} new cheques (Total: ${data.total})</div>`;
+      setTimeout(() => { closeModal(); loadCheques(); }, 1500);
+    } else {
+      document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b;background:#fee2e2;padding:10px;border-radius:8px">❌ ${data.error}</div>`;
+    }
+  } catch (e) {
+    document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b">Error: ${e.message}</div>`;
+  }
+}
+
+// ── Contacts ──
+async function loadContacts() {
+  const search = document.getElementById('contactSearch')?.value || '';
+  const params = new URLSearchParams();
+  if (contactTypeFilter) params.set('type', contactTypeFilter);
+  if (search) params.set('search', search);
+
+  const res = await fetch('/api/contacts?' + params);
+  const data = await res.json();
+  const el = document.getElementById('contactsTable');
+
+  if (!data.data?.length) {
+    el.innerHTML = '<div class="empty">No contacts found. Add contacts or import from your Debtors/Creditors report.</div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Name</th><th>Type</th><th>Phone</th><th>City</th><th>Balance</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+      ${data.data.map(c => `<tr class="${c.blacklisted ? 'blacklisted-row' : ''}">
+        <td>${esc(c.name)}${c.blacklisted ? ' <span class="badge badge-red">Blacklisted</span>' : ''}</td>
+        <td><span class="badge ${c.contactType === 'supplier' ? 'badge-purple' : 'badge-blue'}">${c.contactType}</span></td>
+        <td>${esc(c.phone || '–')}</td>
+        <td>${esc(c.city || '–')}</td>
+        <td>PKR ${fmt(c.balance || 0)}</td>
+        <td><div class="table-actions">
+          <button class="btn btn-sm btn-outline" onclick="editContact('${c.id}')">Edit</button>
+          <button class="btn btn-sm btn-red" onclick="deleteContact('${c.id}')">Delete</button>
+        </div></td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function showAddContactModal(prefill) {
+  document.getElementById('contactModalTitle').textContent = 'Add Contact';
+  document.getElementById('contactId').value = '';
+  document.getElementById('contactName').value = prefill?.name || '';
+  document.getElementById('contactPhone').value = prefill?.phone || '';
+  document.getElementById('contactCity').value = prefill?.city || '';
+  document.getElementById('contactCode').value = prefill?.code || '';
+  document.getElementById('contactBalance').value = prefill?.balance || '';
+  document.getElementById('contactNotes').value = '';
+  document.getElementById('contactBlacklisted').checked = false;
+  document.getElementById('contactTypeField').value = prefill?.contactType || 'customer';
+  openModal('contactModal');
+}
+
+async function editContact(id) {
+  const res = await fetch(`/api/contacts/${id}`);
+  const data = await res.json();
+  if (!data.success) return showToast('Contact not found', 'error');
+  const c = data.data;
+
+  document.getElementById('contactModalTitle').textContent = 'Edit Contact';
+  document.getElementById('contactId').value = c.id;
+  document.getElementById('contactName').value = c.name || '';
+  document.getElementById('contactPhone').value = c.phone || '';
+  document.getElementById('contactCity').value = c.city || '';
+  document.getElementById('contactCode').value = c.code || '';
+  document.getElementById('contactBalance').value = c.balance || '';
+  document.getElementById('contactNotes').value = c.notes || '';
+  document.getElementById('contactBlacklisted').checked = !!c.blacklisted;
+  document.getElementById('contactTypeField').value = c.contactType || 'customer';
+  openModal('contactModal');
+}
+
+async function saveContact() {
+  const id = document.getElementById('contactId').value;
+  const payload = {
+    name: document.getElementById('contactName').value.trim(),
+    phone: document.getElementById('contactPhone').value.trim(),
+    city: document.getElementById('contactCity').value.trim(),
+    code: document.getElementById('contactCode').value.trim(),
+    balance: document.getElementById('contactBalance').value,
+    notes: document.getElementById('contactNotes').value.trim(),
+    blacklisted: document.getElementById('contactBlacklisted').checked,
+    contactType: document.getElementById('contactTypeField').value
+  };
+
+  if (!payload.name || !payload.phone) return showToast('Name and phone are required', 'error');
+
+  const url = id ? `/api/contacts/${id}` : '/api/contacts';
+  const method = id ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    closeModal();
+    loadContacts();
+    showToast(id ? 'Contact updated' : 'Contact added', 'success');
+  } else {
+    showToast(data.error, 'error');
+  }
+}
+
+async function deleteContact(id) {
+  if (!confirm('Delete this contact?')) return;
+  const res = await fetch(`/api/contacts/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.success) { loadContacts(); showToast('Contact deleted'); }
+  else showToast(data.error, 'error');
+}
+
+// ── Message History ──
+async function loadHistory() {
+  const search = document.getElementById('historySearch')?.value || '';
+  const params = new URLSearchParams({ limit: 100 });
+  if (historyCategory) params.set('category', historyCategory);
+  if (search) params.set('search', search);
+
+  const res = await fetch('/api/messages?' + params);
+  const data = await res.json();
+  const el = document.getElementById('historyTable');
+
+  if (!data.data?.length) {
+    el.innerHTML = '<div class="empty">No messages sent yet</div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Name</th><th>Phone</th><th>Category</th><th>Amount</th><th>Status</th><th>Sent At</th><th></th>
+    </tr></thead>
+    <tbody>
+      ${data.data.map(m => `<tr>
+        <td>${esc(m.contactName)}</td>
+        <td>${esc(m.phone || '–')}</td>
+        <td><span class="badge ${catBadge(m.category)}">${m.category || '–'}</span></td>
+        <td>${m.amount ? 'PKR ' + fmt(m.amount) : '–'}</td>
+        <td><span class="badge ${m.status === 'sent' ? 'badge-green' : 'badge-red'}">${m.status}</span></td>
+        <td>${m.sentAt ? new Date(m.sentAt).toLocaleString('en-PK') : '–'}</td>
+        <td>${m.messageText ? `<button class="btn btn-sm btn-outline" onclick="previewMessage(${JSON.stringify(m.messageText).replace(/"/g, '&quot;')})">👁</button>` : ''}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function previewMessage(text) {
+  document.getElementById('messagePreviewText').textContent = text;
+  openModal('messageModal');
+}
+
+// ── Settings ──
+async function loadSettings() {
+  const res = await fetch('/api/settings');
+  const data = await res.json();
+  if (!data.success) return;
+  const s = data.data;
+
+  document.getElementById('settingPhoneId').value = s.phoneNumberId || '';
+  document.getElementById('settingWabaId').value = s.businessAccountId || '';
+  document.getElementById('settingCompany').value = s.companyName || 'AB Fashion Jewellery';
+
+  const tokenStatus = document.getElementById('settingTokenStatus');
+  if (s.accessTokenSet) {
+    tokenStatus.textContent = `✅ Token is set (${s.accessTokenPreview}) – Leave blank to keep current`;
+    tokenStatus.style.color = '#065f46';
+  } else {
+    tokenStatus.textContent = 'No token set yet';
+    tokenStatus.style.color = '#dc2626';
+  }
+}
+
+async function saveSettings() {
+  const payload = {
+    phoneNumberId: document.getElementById('settingPhoneId').value.trim(),
+    accessToken: document.getElementById('settingToken').value.trim(),
+    businessAccountId: document.getElementById('settingWabaId').value.trim(),
+    companyName: document.getElementById('settingCompany').value.trim()
+  };
+
+  const res = await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  const msg = document.getElementById('settingsMsg');
+
+  if (data.success) {
+    msg.className = 'settings-msg success';
+    msg.textContent = '✅ Settings saved successfully';
+    document.getElementById('settingToken').value = '';
+    loadSettings();
+    checkAPIStatus();
+  } else {
+    msg.className = 'settings-msg error';
+    msg.textContent = '❌ ' + data.error;
+  }
+
+  setTimeout(() => { msg.style.display = 'none'; msg.className = 'settings-msg'; }, 4000);
+}
+
+async function validateAPI() {
+  const msg = document.getElementById('settingsMsg');
+  msg.className = 'settings-msg';
+  msg.textContent = 'Testing connection...';
+  msg.style.display = 'block';
+
+  const res = await fetch('/api/settings/validate', { method: 'POST' });
+  const data = await res.json();
+
+  if (data.success) {
+    msg.className = 'settings-msg success';
+    msg.textContent = `✅ Connected! Phone: ${data.phoneNumber} | Business: ${data.businessName}`;
+  } else {
+    msg.className = 'settings-msg error';
+    msg.textContent = '❌ Connection failed: ' + (data.error || 'Invalid credentials');
+  }
+}
+
+async function sendTestMessage() {
+  const phone = document.getElementById('testPhone').value.trim();
+  if (!phone) return showToast('Enter a phone number', 'error');
+
+  const msg = document.getElementById('testMsg');
+  msg.style.display = 'block';
+  msg.className = 'settings-msg';
+  msg.textContent = 'Sending test message...';
+
+  const res = await fetch('/api/settings/test-message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone })
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    msg.className = 'settings-msg success';
+    msg.textContent = '✅ Test message sent successfully!';
+  } else {
+    msg.className = 'settings-msg error';
+    msg.textContent = '❌ ' + data.error;
+  }
+}
+
+// ── Modal Helpers ──
+function openModal(id) {
+  document.getElementById('modalOverlay').classList.add('visible');
+  document.getElementById(id)?.classList.add('visible');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('visible');
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast visible ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
+}
+
+// ── Helpers ──
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString('en-PK');
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+function catBadge(cat) {
+  const map = { receivable: 'badge-green', payment: 'badge-amber', staff: 'badge-blue', tp: 'badge-purple', cheque: 'badge-gray' };
+  return map[cat] || 'badge-gray';
+}
+
+function chequeStatusBadge(status) {
+  if (status === 'Cleared') return 'badge-green';
+  if (status === 'Dishonored') return 'badge-red';
+  return 'badge-amber';
+}
