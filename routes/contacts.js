@@ -112,6 +112,50 @@ router.delete('/:id', (req, res) => {
   res.status(404).json({ success: false, error: 'Contact not found' });
 });
 
+// POST bulk import contacts (replaces all of a given type)
+router.post('/bulk', (req, res) => {
+  const { contacts, replace } = req.body;
+  if (!Array.isArray(contacts) || contacts.length === 0) {
+    return res.status(400).json({ success: false, error: 'contacts array is required' });
+  }
+
+  const now = new Date().toISOString();
+  const customersBulk = [];
+  const suppliersBulk = [];
+
+  for (const c of contacts) {
+    const record = {
+      id: uuidv4(),
+      name: (c.name || '').trim(),
+      phone: (c.phone || '').trim(),
+      city: (c.city || '').trim(),
+      code: (c.accountCode || c.code || '').trim(),
+      balance: parseFloat(c.balance) || 0,
+      contactType: c.type || c.contactType || 'customer',
+      blacklisted: c.blacklisted || false,
+      notes: (c.notes || '').trim(),
+      createdAt: now
+    };
+    if (record.contactType === 'supplier') suppliersBulk.push(record);
+    else customersBulk.push(record);
+  }
+
+  if (customersBulk.length > 0) {
+    const existing = replace ? [] : readData('customers');
+    writeData('customers', [...existing, ...customersBulk]);
+  }
+  if (suppliersBulk.length > 0) {
+    const existing = replace ? [] : readData('suppliers');
+    writeData('suppliers', [...existing, ...suppliersBulk]);
+  }
+
+  res.json({
+    success: true,
+    imported: { customers: customersBulk.length, suppliers: suppliersBulk.length },
+    total: contacts.length
+  });
+});
+
 // GET stats
 router.get('/meta/stats', (req, res) => {
   const customers = readData('customers');
