@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AB Fashion Jewellery – WhatsApp Dashboard</title>
+  <title>AB Fashion Jewellery â WhatsApp Dashboard</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <!-- Sidebar -->
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-icon">💎</div>
+      <div class="logo-icon">ð</div>
       <div class="logo-text">
         <div class="logo-title">AB Fashion</div>
         <div class="logo-sub">WhatsApp Dashboard</div>
@@ -19,22 +19,22 @@
 
     <ul class="sidebar-nav">
       <li><a href="#" class="nav-link active" data-page="overview">
-        <span class="nav-icon">📊</span> Overview
+        <span class="nav-icon">ð</span> Overview
       </a></li>
       <li><a href="#" class="nav-link" data-page="daybook">
-        <span class="nav-icon">📤</span> Day Book
+        <span class="nav-icon">ð¤</span> Day Book
       </a></li>
       <li><a href="#" class="nav-link" data-page="cheques">
-        <span class="nav-icon">🏦</span> Cheques
+        <span class="nav-icon">ð¦</span> Cheques
       </a></li>
       <li><a href="#" class="nav-link" data-page="contacts">
-        <span class="nav-icon">👥</span> Contacts
+        <span class="nav-icon">ð¥</span> Contacts
       </a></li>
       <li><a href="#" class="nav-link" data-page="history">
-        <span class="nav-icon">📋</span> Message History
+        <span class="nav-icon">ð</span> Message History
       </a></li>
       <li><a href="#" class="nav-link" data-page="settings">
-        <span class="nav-icon">⚙️</span> Settings
+        <span class="nav-icon">âï¸</span> Settings
       </a></li>
     </ul>
 
@@ -56,30 +56,30 @@
 
       <div class="stats-grid">
         <div class="stat-card green">
-          <div class="stat-icon">📤</div>
+          <div class="stat-icon">ð¤</div>
           <div class="stat-info">
-            <div class="stat-value" id="statTodaySent">–</div>
+            <div class="stat-value" id="statTodaySent">â</div>
             <div class="stat-label">Messages Today</div>
           </div>
         </div>
         <div class="stat-card blue">
-          <div class="stat-icon">👥</div>
+          <div class="stat-icon">ð¥</div>
           <div class="stat-info">
-            <div class="stat-value" id="statCustomers">–</div>
+            <div class="stat-value" id="statCustomers">â</div>
             <div class="stat-label">Customers</div>
           </div>
         </div>
-        <div class="stat-card amber">
-          <div class="stat-icon">⏰</div>
+        <div class="stat-card amber" onclick="goToChequesFiltered('Pending','tomorrow')" style="cursor:pointer" title="View cheques due tomorrow">
+          <div class="stat-icon">â°</div>
           <div class="stat-info">
-            <div class="stat-value" id="statChequesTomorrow">–</div>
+            <div class="stat-value" id="statChequesTomorrow">â</div>
             <div class="stat-label">Cheques Due Tomorrow</div>
           </div>
         </div>
-        <div class="stat-card red">
-          <div class="stat-icon">❌</div>
+        <div class="stat-card red" onclick="goToChequesFiltered('Dishonored','')" style="cursor:pointer" title="View dishonored cheques">
+          <div class="stat-icon">â</div>
           <div class="stat-info">
-            <div class="stat-value" id="statDishonored">–</div>
+            <div class="stat-value" id="statDishonored">â</div>
             <div class="stat-label">Dishonored Cheques</div>
           </div>
         </div>
@@ -91,26 +91,26 @@
             <h3>Quick Actions</h3>
           </div>
           <div class="quick-actions">
-            <button class="btn btn-primary" onclick="goTo('daybook')">📤 Upload Day Book PDF</button>
-            <button class="btn btn-amber" onclick="sendUpcomingReminders()">⏰ Send Tomorrow's Cheque Reminders</button>
-            <button class="btn btn-outline" onclick="goTo('contacts')">➕ Add Contact</button>
+            <button class="btn btn-primary" onclick="goTo('daybook')">ð¤ Upload Day Book PDF</button>
+            <button class="btn btn-amber" onclick="sendUpcomingReminders()">â° Send Tomorrow's Cheque Reminders</button>
+            <button class="btn btn-outline" onclick="goTo('contacts')">â Add Contact</button>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header"><h3>Cheque Overview</h3></div>
           <div class="cheque-overview">
-            <div class="cheque-stat pending">
+            <div class="cheque-stat pending" onclick="goToChequesFiltered('Pending','')" style="cursor:pointer" title="View pending cheques">
               <span class="cs-label">Pending</span>
-              <span class="cs-value" id="ovChqPending">–</span>
+              <span class="cs-value" id="ovChqPending">â</span>
             </div>
-            <div class="cheque-stat cleared">
+            <div class="cheque-stat cleared" onclick="goToChequesFiltered('Cleared','')" style="cursor:pointer" title="View cleared cheques">
               <span class="cs-label">Cleared</span>
-              <span class="cs-value" id="ovChqCleared">–</span>
+              <span class="cs-value" id="ovChqCleared">â</span>
             </div>
-            <div class="cheque-stat dishonored">
+            <div class="cheque-stat dishonored" onclick="goToChequesFiltered('Dishonored','')" style="cursor:pointer" title="View dishonored cheques">
               <span class="cs-label">Dishonored</span>
-              <span class="cs-value" id="ovChqDishonored">–</span>
+              <span class="cs-value" id="ovChqDishonored">â</span>
             </div>
           </div>
         </div>
@@ -135,7 +135,7 @@
       </div>
 
       <div class="upload-zone" id="uploadZone">
-        <div class="upload-icon">📄</div>
+        <div class="upload-icon">ð</div>
         <div class="upload-text">Drop your Day Book PDF here</div>
         <div class="upload-sub">or</div>
         <label class="btn btn-primary">
@@ -146,16 +146,16 @@
 
       <div class="card" id="parseResult" style="display:none">
         <div class="card-header">
-          <h3>📋 Parsed Entries</h3>
+          <h3>ð Parsed Entries</h3>
           <span id="parsedDate" class="badge"></span>
         </div>
 
         <div class="category-tabs">
           <button class="cat-tab active" data-cat="all">All</button>
-          <button class="cat-tab" data-cat="receivable">💚 Receivable</button>
-          <button class="cat-tab" data-cat="payment">🟡 Payment</button>
-          <button class="cat-tab" data-cat="staff">👤 Staff</button>
-          <button class="cat-tab" data-cat="tp">🔄 Third Party</button>
+          <button class="cat-tab" data-cat="receivable">ð Receivable</button>
+          <button class="cat-tab" data-cat="payment">ð¡ Payment</button>
+          <button class="cat-tab" data-cat="staff">ð¤ Staff</button>
+          <button class="cat-tab" data-cat="tp">ð Third Party</button>
         </div>
 
         <div id="parsedEntriesContainer"></div>
@@ -163,7 +163,7 @@
         <div class="send-bar">
           <div class="send-summary" id="sendSummary"></div>
           <button class="btn btn-primary btn-large" id="sendAllBtn" onclick="sendDaybookMessages()">
-            📨 Send All Messages
+            ð¨ Send All Messages
           </button>
         </div>
       </div>
@@ -179,21 +179,23 @@
       <div class="page-header">
         <h1>Cheque Management</h1>
         <div class="header-actions">
-          <button class="btn btn-outline" onclick="showImportChequeModal()">📥 Import PDF</button>
-          <button class="btn btn-outline" onclick="showAddChequeModal()">➕ Add Cheque</button>
-          <button class="btn btn-amber" onclick="sendUpcomingReminders()">⏰ Send Tomorrow's Reminders</button>
+          <button class="btn btn-outline" onclick="showImportChequeModal()">ð¥ Import PDF</button>
+          <button class="btn btn-outline" onclick="showAddChequeModal()">â Add Cheque</button>
+          <button class="btn btn-amber" onclick="sendUpcomingReminders()">â° Send Tomorrow's Reminders</button>
         </div>
       </div>
 
       <div class="filter-bar">
         <div class="filter-tabs">
           <button class="filter-tab active" data-status="">All</button>
-          <button class="filter-tab" data-status="Pending">⏰ Pending</button>
-          <button class="filter-tab" data-status="Cleared">✅ Cleared</button>
-          <button class="filter-tab" data-status="Dishonored">❌ Dishonored</button>
+          <button class="filter-tab" data-status="Pending">â° Pending</button>
+          <button class="filter-tab" data-status="Cleared">â Cleared</button>
+          <button class="filter-tab" data-status="Dishonored">â Dishonored</button>
         </div>
         <input type="text" class="search-input" id="chequeSearch" placeholder="Search name, cheque no, bank..." oninput="loadCheques()">
       </div>
+
+      <div id="missingInfoBanner"></div>
 
       <div class="card">
         <div id="chequesTable">
@@ -207,7 +209,7 @@
       <div class="page-header">
         <h1>Contacts</h1>
         <div class="header-actions">
-          <button class="btn btn-primary" onclick="showAddContactModal()">➕ Add Contact</button>
+          <button class="btn btn-primary" onclick="showAddContactModal()">â Add Contact</button>
         </div>
       </div>
 
@@ -260,7 +262,7 @@
       <div class="card settings-card">
         <div class="card-header"><h3>WhatsApp API Credentials</h3></div>
         <div class="settings-note">
-          Get these from <strong>developers.facebook.com</strong> → Your App → WhatsApp → API Setup
+          Get these from <strong>developers.facebook.com</strong> â Your App â WhatsApp â API Setup
         </div>
         <div class="form-group">
           <label>Phone Number ID</label>
@@ -280,8 +282,8 @@
           <input type="text" id="settingCompany" placeholder="AB Fashion Jewellery">
         </div>
         <div class="settings-actions">
-          <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
-          <button class="btn btn-outline" onclick="validateAPI()">🔗 Test Connection</button>
+          <button class="btn btn-primary" onclick="saveSettings()">ð¾ Save Settings</button>
+          <button class="btn btn-outline" onclick="validateAPI()">ð Test Connection</button>
         </div>
         <div id="settingsMsg" class="settings-msg"></div>
       </div>
@@ -308,7 +310,7 @@
   <div class="modal" id="contactModal">
     <div class="modal-header">
       <h3 id="contactModalTitle">Add Contact</h3>
-      <button onclick="closeModal()" class="modal-close">✕</button>
+      <button onclick="closeModal()" class="modal-close">â</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="contactId">
@@ -366,7 +368,7 @@
   <div class="modal" id="chequeModal">
     <div class="modal-header">
       <h3>Add Cheque</h3>
-      <button onclick="closeModal()" class="modal-close">✕</button>
+      <button onclick="closeModal()" class="modal-close">â</button>
     </div>
     <div class="modal-body">
       <div class="form-row">
@@ -402,9 +404,9 @@
       <div class="form-group">
         <label>Status</label>
         <select id="chqStatus">
-          <option value="Pending">⏰ Pending</option>
-          <option value="Cleared">✅ Cleared</option>
-          <option value="Dishonored">❌ Dishonored</option>
+          <option value="Pending">â° Pending</option>
+          <option value="Cleared">â Cleared</option>
+          <option value="Dishonored">â Dishonored</option>
         </select>
       </div>
     </div>
@@ -418,7 +420,7 @@
   <div class="modal" id="messageModal">
     <div class="modal-header">
       <h3>Message Preview</h3>
-      <button onclick="closeModal()" class="modal-close">✕</button>
+      <button onclick="closeModal()" class="modal-close">â</button>
     </div>
     <div class="modal-body">
       <div class="whatsapp-bubble" id="messagePreviewText"></div>
@@ -432,7 +434,7 @@
   <div class="modal" id="importChequeModal">
     <div class="modal-header">
       <h3>Import Cheques from PDF</h3>
-      <button onclick="closeModal()" class="modal-close">✕</button>
+      <button onclick="closeModal()" class="modal-close">â</button>
     </div>
     <div class="modal-body">
       <p>Upload your BillX Cheque List Report PDF to import all cheques automatically.</p>
