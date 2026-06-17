@@ -250,6 +250,35 @@ router.post('/bulk/send-upcoming', async (req, res) => {
   });
 });
 
+// POST bulk import cheques (array)
+router.post('/bulk', (req, res) => {
+  const { cheques: incoming, replace } = req.body;
+  if (!Array.isArray(incoming) || incoming.length === 0) {
+    return res.status(400).json({ success: false, error: 'cheques array is required' });
+  }
+
+  const now = new Date().toISOString();
+  const records = incoming.map(c => ({
+    id: uuidv4(),
+    accountName: (c.accountName || '').trim(),
+    phone: (c.phone || '').trim(),
+    chequeNo: (c.chequeNumber || c.chequeNo || '').trim(),
+    bankName: (c.bankName || '').trim(),
+    amount: parseFloat(c.amount) || 0,
+    balance: parseFloat(c.balance ?? c.amount) || 0,
+    chequeDate: c.chequeDate || '',
+    status: c.status || 'Pending',
+    blacklisted: c.blacklisted || false,
+    notes: (c.notes || '').trim(),
+    createdAt: now
+  }));
+
+  const existing = replace ? [] : readData('cheques');
+  writeData('cheques', [...existing, ...records]);
+
+  res.json({ success: true, imported: records.length, total: existing.length + records.length });
+});
+
 // POST import cheques from PDF
 router.post('/import-pdf', upload.single('cheques'), async (req, res) => {
   try {
