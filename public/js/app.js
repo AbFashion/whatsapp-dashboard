@@ -1,4 +1,4 @@
-// ── AB Fashion Jewellery – WhatsApp Dashboard ──
+// ââ AB Fashion Jewellery â WhatsApp Dashboard ââ
 // Frontend JavaScript
 
 let currentPage = 'overview';
@@ -6,8 +6,9 @@ let parsedSession = null;
 let contactTypeFilter = '';
 let chequeStatusFilter = '';
 let historyCategory = '';
+let _chequeDateFilter = null; // client-side date filter (DD-MM-YYYY)
 
-// ── Init ──
+// ââ Init ââ
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-PK', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
 });
 
-// ── Navigation ──
+// ââ Navigation ââ
 function goTo(page) {
   currentPage = page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -100,7 +101,32 @@ function goTo(page) {
   if (page === 'settings') loadSettings();
 }
 
-// ── Dashboard ──
+function goToChequesFiltered(status, search) {
+  _chequeDateFilter = null;
+  if (search === 'tomorrow') {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    _chequeDateFilter = `${dd}-${mm}-${yyyy}`;
+    search = '';
+  }
+  chequeStatusFilter = status;
+  currentPage = 'cheques';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('page-cheques')?.classList.add('active');
+  document.querySelector('.nav-link[data-page="cheques"]')?.classList.add('active');
+  document.querySelectorAll('.filter-tab[data-status]').forEach(t =>
+    t.classList.toggle('active', t.dataset.status === status)
+  );
+  const searchEl = document.getElementById('chequeSearch');
+  if (searchEl) searchEl.value = search || '';
+  loadCheques();
+}
+
+// ââ Dashboard ââ
 async function loadDashboard() {
   try {
     const res = await fetch('/api/dashboard');
@@ -132,7 +158,7 @@ async function loadRecentMessages() {
 
   el.innerHTML = data.data.map(m => `
     <div class="msg-item">
-      <span class="result-icon">${m.status === 'sent' ? '✅' : '❌'}</span>
+      <span class="result-icon">${m.status === 'sent' ? 'â' : 'â'}</span>
       <span class="msg-name">${esc(m.contactName)}</span>
       <span class="badge ${catBadge(m.category)}">${m.category}</span>
       <span class="msg-time">${timeAgo(m.sentAt)}</span>
@@ -140,7 +166,7 @@ async function loadRecentMessages() {
   `).join('');
 }
 
-// ── API Status ──
+// ââ API Status ââ
 async function checkAPIStatus() {
   try {
     const res = await fetch('/api/settings');
@@ -158,10 +184,10 @@ async function checkAPIStatus() {
   } catch { }
 }
 
-// ── Day Book ──
+// ââ Day Book ââ
 async function uploadDayBook(file) {
   const zone = document.getElementById('uploadZone');
-  zone.innerHTML = '<div class="upload-icon">⏳</div><div class="upload-text">Parsing PDF...</div>';
+  zone.innerHTML = '<div class="upload-icon">â³</div><div class="upload-text">Parsing PDF...</div>';
 
   const formData = new FormData();
   formData.append('daybook', file);
@@ -195,7 +221,7 @@ async function uploadDayBook(file) {
 
 function resetUploadZone() {
   document.getElementById('uploadZone').innerHTML = `
-    <div class="upload-icon">📄</div>
+    <div class="upload-icon">ð</div>
     <div class="upload-text">Drop your Day Book PDF here</div>
     <div class="upload-sub">or</div>
     <label class="btn btn-primary">
@@ -213,7 +239,7 @@ function renderEntries(filterCat) {
   const container = document.getElementById('parsedEntriesContainer');
   const categories = parsedSession.categories || {};
 
-  const catLabels = { receivable: '💚 Receivable Voucher', payment: '🟡 Payment Voucher', staff: '👤 Staff Payment', tp: '🔄 Third Party' };
+  const catLabels = { receivable: 'ð Receivable Voucher', payment: 'ð¡ Payment Voucher', staff: 'ð¤ Staff Payment', tp: 'ð Third Party' };
 
   let html = '';
   let totalEntries = 0;
@@ -230,7 +256,7 @@ function renderEntries(filterCat) {
       const hasPhone = !!e.phone;
       const isBlacklisted = e.blacklisted;
       html += `<div class="entry-item">
-        <span class="entry-status">${isBlacklisted ? '🚫' : hasPhone ? '✅' : '⚠️'}</span>
+        <span class="entry-status">${isBlacklisted ? 'ð«' : hasPhone ? 'â' : 'â ï¸'}</span>
         <span class="entry-name">${esc(e.accountName)}</span>
         <span class="entry-phone">${e.phone || '<span style="color:#ef4444">No phone</span>'}</span>
         <span class="entry-amount">PKR ${fmt(e.amount)}</span>
@@ -248,7 +274,7 @@ async function sendDaybookMessages() {
 
   const btn = document.getElementById('sendAllBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ Sending...';
+  btn.textContent = 'â³ Sending...';
 
   try {
     const res = await fetch(`/api/daybook/send/${parsedSession.sessionId}`, {
@@ -261,18 +287,18 @@ async function sendDaybookMessages() {
     if (!data.success) {
       showToast(data.error, 'error');
       btn.disabled = false;
-      btn.textContent = '📨 Send All Messages';
+      btn.textContent = 'ð¨ Send All Messages';
       return;
     }
 
     const s = data.summary;
     let html = `<div style="margin-bottom:12px;font-weight:600">
-      ✅ Sent: ${s.sent} | ❌ Failed: ${s.failed} | ⏭️ Skipped: ${s.skipped}
+      â Sent: ${s.sent} | â Failed: ${s.failed} | â­ï¸ Skipped: ${s.skipped}
     </div>`;
 
     html += data.results.map(r => `
       <div class="result-row">
-        <span class="result-icon">${r.status === 'sent' ? '✅' : r.status === 'failed' ? '❌' : '⏭️'}</span>
+        <span class="result-icon">${r.status === 'sent' ? 'â' : r.status === 'failed' ? 'â' : 'â­ï¸'}</span>
         <span class="result-name">${esc(r.name)}</span>
         <span class="result-reason">${r.error || r.reason || ''}</span>
       </div>
@@ -286,14 +312,40 @@ async function sendDaybookMessages() {
     showToast(e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '📨 Send All Messages';
+    btn.textContent = 'ð¨ Send All Messages';
   }
 }
 
-// ── Cheques ──
+// ââ Cheques ââ
+function missingBadge(val, label) {
+  return val?.trim() ? esc(val) : `<span class="badge badge-red" title="Missing ${label}">â  Missing</span>`;
+}
+
+async function updateMissingBanner() {
+  try {
+    const res = await fetch('/api/cheques?limit=99999');
+    const data = await res.json();
+    const all = data.data || [];
+    const missingNo   = all.filter(c => !c.chequeNo?.trim()).length;
+    const missingBank = all.filter(c => !c.bankName?.trim()).length;
+    const total = all.filter(c => !c.chequeNo?.trim() || !c.bankName?.trim()).length;
+    const banner = document.getElementById('missingInfoBanner');
+    if (!banner) return;
+    if (total === 0) { banner.innerHTML = ''; return; }
+    const parts = [];
+    if (missingNo)   parts.push(`${missingNo} missing cheque number${missingNo > 1 ? 's' : ''}`);
+    if (missingBank) parts.push(`${missingBank} missing bank name${missingBank > 1 ? 's' : ''}`);
+    banner.innerHTML = `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#991b1b;display:flex;align-items:center;gap:8px">
+      <span style="font-size:16px">â ï¸</span>
+      <strong>${total} cheque${total > 1 ? 's' : ''} with incomplete info:</strong> ${parts.join(' Â· ')}
+      <span style="margin-left:auto;opacity:0.7">Edit each row to fill in details</span>
+    </div>`;
+  } catch(e) { /* silently ignore */ }
+}
+
 async function loadCheques() {
   const search = document.getElementById('chequeSearch')?.value || '';
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ limit: 99999 });
   if (chequeStatusFilter) params.set('status', chequeStatusFilter);
   if (search) params.set('search', search);
 
@@ -301,7 +353,25 @@ async function loadCheques() {
   const data = await res.json();
   const el = document.getElementById('chequesTable');
 
-  if (!data.data?.length) {
+  updateMissingBanner();
+
+  let rows = data.data || [];
+
+  // Client-side date filter
+  const dateFilter = _chequeDateFilter;
+  if (dateFilter) {
+    rows = rows.filter(c => c.chequeDate === dateFilter);
+    document.getElementById('dateBanner')?.remove();
+    const banner = document.createElement('div');
+    banner.id = 'dateBanner';
+    banner.style.cssText = 'background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:8px';
+    banner.innerHTML = `ð Showing cheques for <strong>${dateFilter}</strong> (${rows.length} found) <button onclick="_chequeDateFilter=null;loadCheques()" style="margin-left:auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px">â Clear filter</button>`;
+    el.parentNode?.insertBefore(banner, el);
+  } else {
+    document.getElementById('dateBanner')?.remove();
+  }
+
+  if (!rows.length) {
     el.innerHTML = '<div class="empty">No cheques found. Import your Cheque List PDF to get started.</div>';
     return;
   }
@@ -312,18 +382,18 @@ async function loadCheques() {
       <th>Amount</th><th>Balance</th><th>Status</th><th>Actions</th>
     </tr></thead>
     <tbody>
-      ${data.data.map(c => `<tr>
+      ${rows.map(c => `<tr>
         <td>${esc(c.accountName)}</td>
-        <td>${esc(c.chequeNo || '–')}</td>
-        <td>${esc(c.bankName || '–')}</td>
-        <td>${esc(c.chequeDate || '–')}</td>
+        <td>${missingBadge(c.chequeNo, 'Cheque No')}</td>
+        <td>${missingBadge(c.bankName, 'Bank Name')}</td>
+        <td>${esc(c.chequeDate || 'â')}</td>
         <td>PKR ${fmt(c.amount)}</td>
-        <td>${c.status === 'Cleared' ? '–' : 'PKR ' + fmt(c.balance || c.amount)}</td>
+        <td>${c.status === 'Cleared' ? 'â' : 'PKR ' + fmt(c.balance || c.amount)}</td>
         <td><span class="badge ${chequeStatusBadge(c.status)}">${c.status}</span></td>
         <td><div class="table-actions">
-          ${c.status === 'Pending' ? `<button class="btn btn-sm btn-amber" onclick="sendChequeReminder('${c.id}','upcoming')">⏰ Remind</button>` : ''}
-          ${c.status === 'Cleared' ? `<button class="btn btn-sm btn-outline" onclick="sendChequeReminder('${c.id}','cleared')">✅ Notify</button>` : ''}
-          ${c.status === 'Dishonored' ? `<button class="btn btn-sm btn-red" onclick="sendChequeReminder('${c.id}','dishonored')">❌ Alert</button>` : ''}
+          ${c.status === 'Pending' ? `<button class="btn btn-sm btn-amber" onclick="sendChequeReminder('${c.id}','upcoming')">â° Remind</button>` : ''}
+          ${c.status === 'Cleared' ? `<button class="btn btn-sm btn-outline" onclick="sendChequeReminder('${c.id}','cleared')">â Notify</button>` : ''}
+          ${c.status === 'Dishonored' ? `<button class="btn btn-sm btn-red" onclick="sendChequeReminder('${c.id}','dishonored')">â Alert</button>` : ''}
           <button class="btn btn-sm btn-outline" onclick="updateChequeStatus('${c.id}', '${c.status}')">Edit</button>
         </div></td>
       </tr>`).join('')}
@@ -427,17 +497,17 @@ async function importChequesPDF() {
     const data = await res.json();
 
     if (data.success) {
-      document.getElementById('importProgress').innerHTML = `<div style="color:#065f46;background:#d1fae5;padding:10px;border-radius:8px">✅ Imported ${data.imported} new cheques (Total: ${data.total})</div>`;
+      document.getElementById('importProgress').innerHTML = `<div style="color:#065f46;background:#d1fae5;padding:10px;border-radius:8px">â Imported ${data.imported} new cheques (Total: ${data.total})</div>`;
       setTimeout(() => { closeModal(); loadCheques(); }, 1500);
     } else {
-      document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b;background:#fee2e2;padding:10px;border-radius:8px">❌ ${data.error}</div>`;
+      document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b;background:#fee2e2;padding:10px;border-radius:8px">â ${data.error}</div>`;
     }
   } catch (e) {
     document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b">Error: ${e.message}</div>`;
   }
 }
 
-// ── Contacts ──
+// ââ Contacts ââ
 async function loadContacts() {
   const search = document.getElementById('contactSearch')?.value || '';
   const params = new URLSearchParams();
@@ -461,8 +531,8 @@ async function loadContacts() {
       ${data.data.map(c => `<tr class="${c.blacklisted ? 'blacklisted-row' : ''}">
         <td>${esc(c.name)}${c.blacklisted ? ' <span class="badge badge-red">Blacklisted</span>' : ''}</td>
         <td><span class="badge ${c.contactType === 'supplier' ? 'badge-purple' : 'badge-blue'}">${c.contactType}</span></td>
-        <td>${esc(c.phone || '–')}</td>
-        <td>${esc(c.city || '–')}</td>
+        <td>${esc(c.phone || 'â')}</td>
+        <td>${esc(c.city || 'â')}</td>
         <td>PKR ${fmt(c.balance || 0)}</td>
         <td><div class="table-actions">
           <button class="btn btn-sm btn-outline" onclick="editContact('${c.id}')">Edit</button>
@@ -548,7 +618,7 @@ async function deleteContact(id) {
   else showToast(data.error, 'error');
 }
 
-// ── Message History ──
+// ââ Message History ââ
 async function loadHistory() {
   const search = document.getElementById('historySearch')?.value || '';
   const params = new URLSearchParams({ limit: 100 });
@@ -571,12 +641,12 @@ async function loadHistory() {
     <tbody>
       ${data.data.map(m => `<tr>
         <td>${esc(m.contactName)}</td>
-        <td>${esc(m.phone || '–')}</td>
-        <td><span class="badge ${catBadge(m.category)}">${m.category || '–'}</span></td>
-        <td>${m.amount ? 'PKR ' + fmt(m.amount) : '–'}</td>
+        <td>${esc(m.phone || 'â')}</td>
+        <td><span class="badge ${catBadge(m.category)}">${m.category || 'â'}</span></td>
+        <td>${m.amount ? 'PKR ' + fmt(m.amount) : 'â'}</td>
         <td><span class="badge ${m.status === 'sent' ? 'badge-green' : 'badge-red'}">${m.status}</span></td>
-        <td>${m.sentAt ? new Date(m.sentAt).toLocaleString('en-PK') : '–'}</td>
-        <td>${m.messageText ? `<button class="btn btn-sm btn-outline" onclick="previewMessage(${JSON.stringify(m.messageText).replace(/"/g, '&quot;')})">👁</button>` : ''}</td>
+        <td>${m.sentAt ? new Date(m.sentAt).toLocaleString('en-PK') : 'â'}</td>
+        <td>${m.messageText ? `<button class="btn btn-sm btn-outline" onclick="previewMessage(${JSON.stringify(m.messageText).replace(/"/g, '&quot;')})">ð</button>` : ''}</td>
       </tr>`).join('')}
     </tbody>
   </table></div>`;
@@ -587,7 +657,7 @@ function previewMessage(text) {
   openModal('messageModal');
 }
 
-// ── Settings ──
+// ââ Settings ââ
 async function loadSettings() {
   const res = await fetch('/api/settings');
   const data = await res.json();
@@ -600,7 +670,7 @@ async function loadSettings() {
 
   const tokenStatus = document.getElementById('settingTokenStatus');
   if (s.accessTokenSet) {
-    tokenStatus.textContent = `✅ Token is set (${s.accessTokenPreview}) – Leave blank to keep current`;
+    tokenStatus.textContent = `â Token is set (${s.accessTokenPreview}) â Leave blank to keep current`;
     tokenStatus.style.color = '#065f46';
   } else {
     tokenStatus.textContent = 'No token set yet';
@@ -619,116 +689,4 @@ async function saveSettings() {
   const res = await fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  const msg = document.getElementById('settingsMsg');
-
-  if (data.success) {
-    msg.className = 'settings-msg success';
-    msg.textContent = '✅ Settings saved successfully';
-    document.getElementById('settingToken').value = '';
-    loadSettings();
-    checkAPIStatus();
-  } else {
-    msg.className = 'settings-msg error';
-    msg.textContent = '❌ ' + data.error;
-  }
-
-  setTimeout(() => { msg.style.display = 'none'; msg.className = 'settings-msg'; }, 4000);
-}
-
-async function validateAPI() {
-  const msg = document.getElementById('settingsMsg');
-  msg.className = 'settings-msg';
-  msg.textContent = 'Testing connection...';
-  msg.style.display = 'block';
-
-  const res = await fetch('/api/settings/validate', { method: 'POST' });
-  const data = await res.json();
-
-  if (data.success) {
-    msg.className = 'settings-msg success';
-    msg.textContent = `✅ Connected! Phone: ${data.phoneNumber} | Business: ${data.businessName}`;
-  } else {
-    msg.className = 'settings-msg error';
-    msg.textContent = '❌ Connection failed: ' + (data.error || 'Invalid credentials');
-  }
-}
-
-async function sendTestMessage() {
-  const phone = document.getElementById('testPhone').value.trim();
-  if (!phone) return showToast('Enter a phone number', 'error');
-
-  const msg = document.getElementById('testMsg');
-  msg.style.display = 'block';
-  msg.className = 'settings-msg';
-  msg.textContent = 'Sending test message...';
-
-  const res = await fetch('/api/settings/test-message', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone })
-  });
-  const data = await res.json();
-
-  if (data.success) {
-    msg.className = 'settings-msg success';
-    msg.textContent = '✅ Test message sent successfully!';
-  } else {
-    msg.className = 'settings-msg error';
-    msg.textContent = '❌ ' + data.error;
-  }
-}
-
-// ── Modal Helpers ──
-function openModal(id) {
-  document.getElementById('modalOverlay').classList.add('visible');
-  document.getElementById(id)?.classList.add('visible');
-}
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('visible');
-  document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
-}
-
-// ── Toast ──
-let toastTimer;
-function showToast(msg, type = '') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast visible ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
-}
-
-// ── Helpers ──
-function esc(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function fmt(n) {
-  return Number(n || 0).toLocaleString('en-PK');
-}
-
-function timeAgo(dateStr) {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return mins + 'm ago';
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return hrs + 'h ago';
-  return Math.floor(hrs / 24) + 'd ago';
-}
-
-function catBadge(cat) {
-  const map = { receivable: 'badge-green', payment: 'badge-amber', staff: 'badge-blue', tp: 'badge-purple', cheque: 'badge-gray' };
-  return map[cat] || 'badge-gray';
-}
-
-function chequeStatusBadge(status) {
-  if (status === 'Cleared') return 'badge-green';
-  if (status === 'Dishonored') return 'badge-red';
-  return 'badge-amber';
-}
+    body: 
