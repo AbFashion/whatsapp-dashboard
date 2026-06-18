@@ -340,7 +340,7 @@ async function updateMissingBanner() {
       <strong>${total} cheque${total > 1 ? 's' : ''} with incomplete info:</strong> ${parts.join(' · ')}
       <span style="margin-left:auto;opacity:0.7">Edit each row to fill in details</span>
     </div>`;
-  } catch	e) { /* silently ignore */ }
+  } catch(e) { /* silently ignore */ }
 }
 
 async function loadCheques() {
