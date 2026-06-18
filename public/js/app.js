@@ -1,4 +1,4 @@
-// ââ AB Fashion Jewellery â WhatsApp Dashboard ââ
+// ── AB Fashion Jewellery – WhatsApp Dashboard ──
 // Frontend JavaScript
 
 let currentPage = 'overview';
@@ -8,7 +8,7 @@ let chequeStatusFilter = '';
 let historyCategory = '';
 let _chequeDateFilter = null; // client-side date filter (DD-MM-YYYY)
 
-// ââ Init ââ
+// ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-PK', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
 });
 
-// ââ Navigation ââ
+// ── Navigation ──
 function goTo(page) {
   currentPage = page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -126,7 +126,7 @@ function goToChequesFiltered(status, search) {
   loadCheques();
 }
 
-// ââ Dashboard ââ
+// ── Dashboard ──
 async function loadDashboard() {
   try {
     const res = await fetch('/api/dashboard');
@@ -158,7 +158,7 @@ async function loadRecentMessages() {
 
   el.innerHTML = data.data.map(m => `
     <div class="msg-item">
-      <span class="result-icon">${m.status === 'sent' ? 'â' : 'â'}</span>
+      <span class="result-icon">${m.status === 'sent' ? '✅' : '❌'}</span>
       <span class="msg-name">${esc(m.contactName)}</span>
       <span class="badge ${catBadge(m.category)}">${m.category}</span>
       <span class="msg-time">${timeAgo(m.sentAt)}</span>
@@ -166,7 +166,7 @@ async function loadRecentMessages() {
   `).join('');
 }
 
-// ââ API Status ââ
+// ── API Status ──
 async function checkAPIStatus() {
   try {
     const res = await fetch('/api/settings');
@@ -184,10 +184,10 @@ async function checkAPIStatus() {
   } catch { }
 }
 
-// ââ Day Book ââ
+// ── Day Book ──
 async function uploadDayBook(file) {
   const zone = document.getElementById('uploadZone');
-  zone.innerHTML = '<div class="upload-icon">â³</div><div class="upload-text">Parsing PDF...</div>';
+  zone.innerHTML = '<div class="upload-icon">⏳</div><div class="upload-text">Parsing PDF...</div>';
 
   const formData = new FormData();
   formData.append('daybook', file);
@@ -221,7 +221,7 @@ async function uploadDayBook(file) {
 
 function resetUploadZone() {
   document.getElementById('uploadZone').innerHTML = `
-    <div class="upload-icon">ð</div>
+    <div class="upload-icon">📄</div>
     <div class="upload-text">Drop your Day Book PDF here</div>
     <div class="upload-sub">or</div>
     <label class="btn btn-primary">
@@ -239,7 +239,7 @@ function renderEntries(filterCat) {
   const container = document.getElementById('parsedEntriesContainer');
   const categories = parsedSession.categories || {};
 
-  const catLabels = { receivable: 'ð Receivable Voucher', payment: 'ð¡ Payment Voucher', staff: 'ð¤ Staff Payment', tp: 'ð Third Party' };
+  const catLabels = { receivable: '💚 Receivable Voucher', payment: '🟡 Payment Voucher', staff: '👤 Staff Payment', tp: '🔄 Third Party' };
 
   let html = '';
   let totalEntries = 0;
@@ -256,7 +256,7 @@ function renderEntries(filterCat) {
       const hasPhone = !!e.phone;
       const isBlacklisted = e.blacklisted;
       html += `<div class="entry-item">
-        <span class="entry-status">${isBlacklisted ? 'ð«' : hasPhone ? 'â' : 'â ï¸'}</span>
+        <span class="entry-status">${isBlacklisted ? '🚫' : hasPhone ? '✅' : '⚠️'}</span>
         <span class="entry-name">${esc(e.accountName)}</span>
         <span class="entry-phone">${e.phone || '<span style="color:#ef4444">No phone</span>'}</span>
         <span class="entry-amount">PKR ${fmt(e.amount)}</span>
@@ -274,7 +274,7 @@ async function sendDaybookMessages() {
 
   const btn = document.getElementById('sendAllBtn');
   btn.disabled = true;
-  btn.textContent = 'â³ Sending...';
+  btn.textContent = '⏳ Sending...';
 
   try {
     const res = await fetch(`/api/daybook/send/${parsedSession.sessionId}`, {
@@ -287,18 +287,18 @@ async function sendDaybookMessages() {
     if (!data.success) {
       showToast(data.error, 'error');
       btn.disabled = false;
-      btn.textContent = 'ð¨ Send All Messages';
+      btn.textContent = '📨 Send All Messages';
       return;
     }
 
     const s = data.summary;
     let html = `<div style="margin-bottom:12px;font-weight:600">
-      â Sent: ${s.sent} | â Failed: ${s.failed} | â­ï¸ Skipped: ${s.skipped}
+      ✅ Sent: ${s.sent} | ❌ Failed: ${s.failed} | ⏭️ Skipped: ${s.skipped}
     </div>`;
 
     html += data.results.map(r => `
       <div class="result-row">
-        <span class="result-icon">${r.status === 'sent' ? 'â' : r.status === 'failed' ? 'â' : 'â­ï¸'}</span>
+        <span class="result-icon">${r.status === 'sent' ? '✅' : r.status === 'failed' ? '❌' : '⏭️'}</span>
         <span class="result-name">${esc(r.name)}</span>
         <span class="result-reason">${r.error || r.reason || ''}</span>
       </div>
@@ -312,13 +312,13 @@ async function sendDaybookMessages() {
     showToast(e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'ð¨ Send All Messages';
+    btn.textContent = '📨 Send All Messages';
   }
 }
 
-// ââ Cheques ââ
+// ── Cheques ──
 function missingBadge(val, label) {
-  return val?.trim() ? esc(val) : `<span class="badge badge-red" title="Missing ${label}">â  Missing</span>`;
+  return val?.trim() ? esc(val) : `<span class="badge badge-red" title="Missing ${label}">⚠ Missing</span>`;
 }
 
 async function updateMissingBanner() {
@@ -336,11 +336,11 @@ async function updateMissingBanner() {
     if (missingNo)   parts.push(`${missingNo} missing cheque number${missingNo > 1 ? 's' : ''}`);
     if (missingBank) parts.push(`${missingBank} missing bank name${missingBank > 1 ? 's' : ''}`);
     banner.innerHTML = `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#991b1b;display:flex;align-items:center;gap:8px">
-      <span style="font-size:16px">â ï¸</span>
-      <strong>${total} cheque${total > 1 ? 's' : ''} with incomplete info:</strong> ${parts.join(' Â· ')}
+      <span style="font-size:16px">⚠️</span>
+      <strong>${total} cheque${total > 1 ? 's' : ''} with incomplete info:</strong> ${parts.join(' · ')}
       <span style="margin-left:auto;opacity:0.7">Edit each row to fill in details</span>
     </div>`;
-  } catch(e) { /* silently ignore */ }
+  } catch	e) { /* silently ignore */ }
 }
 
 async function loadCheques() {
@@ -365,7 +365,7 @@ async function loadCheques() {
     const banner = document.createElement('div');
     banner.id = 'dateBanner';
     banner.style.cssText = 'background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e;display:flex;align-items:center;gap:8px';
-    banner.innerHTML = `ð Showing cheques for <strong>${dateFilter}</strong> (${rows.length} found) <button onclick="_chequeDateFilter=null;loadCheques()" style="margin-left:auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px">â Clear filter</button>`;
+    banner.innerHTML = `📅 Showing cheques for <strong>${dateFilter}</strong> (${rows.length} found) <button onclick="_chequeDateFilter=null;loadCheques()" style="margin-left:auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px">✕ Clear filter</button>`;
     el.parentNode?.insertBefore(banner, el);
   } else {
     document.getElementById('dateBanner')?.remove();
@@ -386,14 +386,14 @@ async function loadCheques() {
         <td>${esc(c.accountName)}</td>
         <td>${missingBadge(c.chequeNo, 'Cheque No')}</td>
         <td>${missingBadge(c.bankName, 'Bank Name')}</td>
-        <td>${esc(c.chequeDate || 'â')}</td>
+        <td>${esc(c.chequeDate || '–')}</td>
         <td>PKR ${fmt(c.amount)}</td>
-        <td>${c.status === 'Cleared' ? 'â' : 'PKR ' + fmt(c.balance || c.amount)}</td>
+        <td>${c.status === 'Cleared' ? '–' : 'PKR ' + fmt(c.balance || c.amount)}</td>
         <td><span class="badge ${chequeStatusBadge(c.status)}">${c.status}</span></td>
         <td><div class="table-actions">
-          ${c.status === 'Pending' ? `<button class="btn btn-sm btn-amber" onclick="sendChequeReminder('${c.id}','upcoming')">â° Remind</button>` : ''}
-          ${c.status === 'Cleared' ? `<button class="btn btn-sm btn-outline" onclick="sendChequeReminder('${c.id}','cleared')">â Notify</button>` : ''}
-          ${c.status === 'Dishonored' ? `<button class="btn btn-sm btn-red" onclick="sendChequeReminder('${c.id}','dishonored')">â Alert</button>` : ''}
+          ${c.status === 'Pending' ? `<button class="btn btn-sm btn-amber" onclick="sendChequeReminder('${c.id}','upcoming')">⏰ Remind</button>` : ''}
+          ${c.status === 'Cleared' ? `<button class="btn btn-sm btn-outline" onclick="sendChequeReminder('${c.id}','cleared')">✅ Notify</button>` : ''}
+          ${c.status === 'Dishonored' ? `<button class="btn btn-sm btn-red" onclick="sendChequeReminder('${c.id}','dishonored')">❌ Alert</button>` : ''}
           <button class="btn btn-sm btn-outline" onclick="updateChequeStatus('${c.id}', '${c.status}')">Edit</button>
         </div></td>
       </tr>`).join('')}
@@ -497,17 +497,17 @@ async function importChequesPDF() {
     const data = await res.json();
 
     if (data.success) {
-      document.getElementById('importProgress').innerHTML = `<div style="color:#065f46;background:#d1fae5;padding:10px;border-radius:8px">â Imported ${data.imported} new cheques (Total: ${data.total})</div>`;
+      document.getElementById('importProgress').innerHTML = `<div style="color:#065f46;background:#d1fae5;padding:10px;border-radius:8px">✅ Imported ${data.imported} new cheques (Total: ${data.total})</div>`;
       setTimeout(() => { closeModal(); loadCheques(); }, 1500);
     } else {
-      document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b;background:#fee2e2;padding:10px;border-radius:8px">â ${data.error}</div>`;
+      document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b;background:#fee2e2;padding:10px;border-radius:8px">❌ ${data.error}</div>`;
     }
   } catch (e) {
     document.getElementById('importProgress').innerHTML = `<div style="color:#991b1b">Error: ${e.message}</div>`;
   }
 }
 
-// ââ Contacts ââ
+// ── Contacts ──
 async function loadContacts() {
   const search = document.getElementById('contactSearch')?.value || '';
   const params = new URLSearchParams();
@@ -531,8 +531,8 @@ async function loadContacts() {
       ${data.data.map(c => `<tr class="${c.blacklisted ? 'blacklisted-row' : ''}">
         <td>${esc(c.name)}${c.blacklisted ? ' <span class="badge badge-red">Blacklisted</span>' : ''}</td>
         <td><span class="badge ${c.contactType === 'supplier' ? 'badge-purple' : 'badge-blue'}">${c.contactType}</span></td>
-        <td>${esc(c.phone || 'â')}</td>
-        <td>${esc(c.city || 'â')}</td>
+        <td>${esc(c.phone || '–')}</td>
+        <td>${esc(c.city || '–')}</td>
         <td>PKR ${fmt(c.balance || 0)}</td>
         <td><div class="table-actions">
           <button class="btn btn-sm btn-outline" onclick="editContact('${c.id}')">Edit</button>
@@ -618,7 +618,7 @@ async function deleteContact(id) {
   else showToast(data.error, 'error');
 }
 
-// ââ Message History ââ
+// ── Message History ──
 async function loadHistory() {
   const search = document.getElementById('historySearch')?.value || '';
   const params = new URLSearchParams({ limit: 100 });
@@ -641,12 +641,12 @@ async function loadHistory() {
     <tbody>
       ${data.data.map(m => `<tr>
         <td>${esc(m.contactName)}</td>
-        <td>${esc(m.phone || 'â')}</td>
-        <td><span class="badge ${catBadge(m.category)}">${m.category || 'â'}</span></td>
-        <td>${m.amount ? 'PKR ' + fmt(m.amount) : 'â'}</td>
+        <td>${esc(m.phone || '–')}</td>
+        <td><span class="badge ${catBadge(m.category)}">${m.category || '–'}</span></td>
+        <td>${m.amount ? 'PKR ' + fmt(m.amount) : '–'}</td>
         <td><span class="badge ${m.status === 'sent' ? 'badge-green' : 'badge-red'}">${m.status}</span></td>
-        <td>${m.sentAt ? new Date(m.sentAt).toLocaleString('en-PK') : 'â'}</td>
-        <td>${m.messageText ? `<button class="btn btn-sm btn-outline" onclick="previewMessage(${JSON.stringify(m.messageText).replace(/"/g, '&quot;')})">ð</button>` : ''}</td>
+        <td>${m.sentAt ? new Date(m.sentAt).toLocaleString('en-PK') : '–'}</td>
+        <td>${m.messageText ? `<button class="btn btn-sm btn-outline" onclick="previewMessage(${JSON.stringify(m.messageText).replace(/"/g, '&quot;')})">👁</button>` : ''}</td>
       </tr>`).join('')}
     </tbody>
   </table></div>`;
@@ -657,7 +657,7 @@ function previewMessage(text) {
   openModal('messageModal');
 }
 
-// ââ Settings ââ
+// ── Settings ──
 async function loadSettings() {
   const res = await fetch('/api/settings');
   const data = await res.json();
@@ -670,7 +670,7 @@ async function loadSettings() {
 
   const tokenStatus = document.getElementById('settingTokenStatus');
   if (s.accessTokenSet) {
-    tokenStatus.textContent = `â Token is set (${s.accessTokenPreview}) â Leave blank to keep current`;
+    tokenStatus.textContent = `✅ Token is set (${s.accessTokenPreview}) – Leave blank to keep current`;
     tokenStatus.style.color = '#065f46';
   } else {
     tokenStatus.textContent = 'No token set yet';
@@ -689,4 +689,116 @@ async function saveSettings() {
   const res = await fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: 
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  const msg = document.getElementById('settingsMsg');
+
+  if (data.success) {
+    msg.className = 'settings-msg success';
+    msg.textContent = '✅ Settings saved successfully';
+    document.getElementById('settingToken').value = '';
+    loadSettings();
+    checkAPIStatus();
+  } else {
+    msg.className = 'settings-msg error';
+    msg.textContent = '❌ ' + data.error;
+  }
+
+  setTimeout(() => { msg.style.display = 'none'; msg.className = 'settings-msg'; }, 4000);
+}
+
+async function validateAPI() {
+  const msg = document.getElementById('settingsMsg');
+  msg.className = 'settings-msg';
+  msg.textContent = 'Testing connection...';
+  msg.style.display = 'block';
+
+  const res = await fetch('/api/settings/validate', { method: 'POST' });
+  const data = await res.json();
+
+  if (data.success) {
+    msg.className = 'settings-msg success';
+    msg.textContent = `✅ Connected! Phone: ${data.phoneNumber} | Business: ${data.businessName}`;
+  } else {
+    msg.className = 'settings-msg error';
+    msg.textContent = '❌ Connection failed: ' + (data.error || 'Invalid credentials');
+  }
+}
+
+async function sendTestMessage() {
+  const phone = document.getElementById('testPhone').value.trim();
+  if (!phone) return showToast('Enter a phone number', 'error');
+
+  const msg = document.getElementById('testMsg');
+  msg.style.display = 'block';
+  msg.className = 'settings-msg';
+  msg.textContent = 'Sending test message...';
+
+  const res = await fetch('/api/settings/test-message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone })
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    msg.className = 'settings-msg success';
+    msg.textContent = '✅ Test message sent successfully!';
+  } else {
+    msg.className = 'settings-msg error';
+    msg.textContent = '❌ ' + data.error;
+  }
+}
+
+// ── Modal Helpers ──
+function openModal(id) {
+  document.getElementById('modalOverlay').classList.add('visible');
+  document.getElementById(id)?.classList.add('visible');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('visible');
+  document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
+}
+
+// ── Toast ──
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast visible ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
+}
+
+// ── Helpers ──
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString('en-PK');
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+function catBadge(cat) {
+  const map = { receivable: 'badge-green', payment: 'badge-amber', staff: 'badge-blue', tp: 'badge-purple', cheque: 'badge-gray' };
+  return map[cat] || 'badge-gray';
+}
+
+function chequeStatusBadge(status) {
+  if (status === 'Cleared') return 'badge-green';
+  if (status === 'Dishonored') return 'badge-red';
+  return 'badge-amber';
+}
