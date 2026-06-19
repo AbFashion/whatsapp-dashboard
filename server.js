@@ -17,6 +17,7 @@ const defaultFiles = {
   'suppliers.json': '[]',
   'cheques.json': '[]',
   'messages.json': '[]',
+  'inbox.json': '[]',
   'settings.json': '{}',
   'daybook_sessions.json': '{}'
 };
@@ -36,12 +37,71 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// WhatsApp Webhook (root-level — Meta requires /webhook, not /api/...)
+const VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || 'abfashion2024';
+const { readData: _rData, writeData: _wData } = require('./utils/dataStore');
+const { v4: _uuid } = require('uuid');
+
+app.get('/webhook', (req, res) => {
+  const mode      = req.query['hub.mode'];
+  const token     = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    console.log('✅ WhatsApp webhook verified');
+    return res.status(200).send(challenge);
+  }
+  res.sendStatus(403);
+});
+
+app.post('/webhook', (req, res) => {
+  const body = req.body;
+  if (body.object === 'whatsapp_business_account') {
+    for (const entry of body.entry || []) {
+      for (const change of entry.changes || []) {
+        if (change.field !== 'messages') continue;
+        const value    = change.value || {};
+        const contacts = value.contacts || [];
+        for (const msg of value.messages || []) {
+          const phone   = msg.from;
+          const contact = contacts.find(c => c.wa_id === phone);
+          const name    = contact?.profile?.name || phone;
+          let text = '';
+          if (msg.type === 'text')          text = msg.text?.body || '';
+          else if (msg.type === 'image')    text = '📷 Image';
+          else if (msg.type === 'document') text = '📄 Document';
+          else if (msg.type === 'audio')    text = '🎵 Audio';
+          else if (msg.type === 'video')    text = '📹 Video';
+          else                              text = `[${msg.type}]`;
+
+          const inbox = _rData('inbox');
+          const ts    = new Date(parseInt(msg.timestamp) * 1000).toISOString();
+          const idx   = inbox.findIndex(c => c.phone === phone);
+          if (idx !== -1) {
+            inbox[idx].messages.push({ id: _uuid(), waMessageId: msg.id, text, direction: 'in', timestamp: ts });
+            inbox[idx].lastMessage = text;
+            inbox[idx].lastAt      = ts;
+            inbox[idx].unread      = (inbox[idx].unread || 0) + 1;
+            inbox[idx].contactName = name;
+          } else {
+            inbox.unshift({ id: _uuid(), phone, contactName: name, lastMessage: text, lastAt: ts, unread: 1,
+              messages: [{ id: _uuid(), waMessageId: msg.id, text, direction: 'in', timestamp: ts }] });
+          }
+          _wData('inbox', inbox);
+        }
+      }
+    }
+    return res.sendStatus(200);
+  }
+  res.sendStatus(404);
+});
+
 // API Routes
 app.use('/api/contacts', require('./routes/contacts'));
 app.use('/api/daybook', require('./routes/daybook'));
 app.use('/api/cheques', require('./routes/cheques'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/inbox', require('./routes/inbox'));
 
 // Dashboard overview stats
 app.get('/api/dashboard', (req, res) => {
