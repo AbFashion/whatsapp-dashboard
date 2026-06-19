@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
   checkAPIStatus();
   loadSettings();
+  pollInboxBadge();
 });
 
 // ── Navigation ──
@@ -99,6 +100,7 @@ function goTo(page) {
   if (page === 'cheques') loadCheques();
   if (page === 'history') loadHistory();
   if (page === 'settings') loadSettings();
+  if (page === 'inbox') loadInbox();
 }
 
 function goToChequesFiltered(status, search) {
